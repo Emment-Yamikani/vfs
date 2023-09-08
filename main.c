@@ -1,21 +1,47 @@
 #include <fs.h>
+#include <generic.h>
+#include <pthread.h>
+
 
 int main(void) {
-    dentry_t *droot = NULL;
-    dentry_t *d0 = NULL, *d1 = NULL, *dentry = NULL;
+    dentry_t *dir = NULL, *d = NULL;
+    vfs_init();
+    dir = vfs_getdroot();
+    dmkdentry(dir, "bin", &d);
+    dunlock(d);
+    dmkdentry(dir, "tmp", &d);
+    dunlock(d);
+    dmkdentry(dir, "lib", &d);
+    dunlock(d);
+    dmkdentry(dir, "usr", &d);
+    dunlock(d);
+    dmkdentry(dir, "home", &d);
+    dunlock(d);
+    dmkdentry(dir, "mnt", &d);
+    dunlock(dir);
+    dir = d;
+    dmkdentry(dir, "ramfs", &d);
+    dunlock(dir);
+    dir = d;
+    dmkdentry(dir, "bin", &d);
+    dunlock(dir);
+    dir = d;
+    dmkdentry(dir, "bash", &d);
+    dunlock(d);
+    dunlock(dir);
 
-    dalloc("/", &droot);
+    vfs_lookup("/mnt/ramfs/bin/bash", NULL, 0, &d);
+    ddump(d, 0);
+    dunlock(d);
 
-    dalloc("tmp", &d0);
-    dbind(droot, d0);
-    dunlock(d0);
+    vfs_lookup("/bin", NULL, 0, &d);
+    ddump(d, 0);
+    dunlock(d);
 
-    dalloc("mnt", &d1);
-    dbind(droot, d1);
-    dunlock(d1);
+    vfs_lookup("/mnt/ramfs/bin", NULL, 0, &d);
+    ddump(d, 0);
+    dunlock(d);
 
-    dlookup(droot, "tmp", &dentry);
-    
     return 0;
 }
 

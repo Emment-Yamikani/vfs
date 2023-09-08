@@ -3,7 +3,7 @@ ld=ld
 ar=ar
 as=as
 
-cflags+= -O2 -g -lgcc -pthread -std=gnu17 -Wall -Werror -Wextra
+cflags+= -pthread -std=gnu2x -Wall -Werror -Wextra
 
 cppflags+=
 
@@ -15,10 +15,12 @@ vfs_flags:=$(cflags) $(cppflags) -Iinclude
 bin_dir=bin
 
 linked_objs+=\
+cmd.o\
 dentry.o\
 inode.o\
 main.o\
 mount.o\
+path.o\
 vfs.o\
 
 .PHONY: all clean

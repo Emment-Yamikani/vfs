@@ -1,4 +1,9 @@
 #pragma once
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <stdio.h>
+#include <ctype.h>
 
 #define __CAT(a, b) a##b
 
@@ -71,8 +76,24 @@
 extern void _kernel_end();
 extern void _kernel_start();
 
-static inline int compare_strings(const char *s0, const char *s1) {
-    if (strlen(s0) != strlen(s1))
-        return -1;
-    return strcmp((char *)s0, (char *)s1);
-}
+typedef struct _cmd_
+{
+    char *cmd;
+    char **args;
+} cmd_t;
+
+#define MOD(a, b) ((a) % (b))
+
+#define DIV(a, b) ((a) / (b))
+
+int compare_strings(const char *s0, const char *s1);
+
+size_t parsesize(char *s);
+
+cmd_t *getcmd(char *__cmd, char **tokens);
+
+char **canonicalize_path(const char *path, size_t *toks, char **plast);
+void tokens_free(char **tokens);
+char **tokenize(char *s, int c, size_t *toks, char **last_tok);
+char *gets(char *buf, int max);
+int readcmd(char *buf, size_t nbuf);

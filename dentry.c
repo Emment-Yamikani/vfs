@@ -4,19 +4,18 @@
 #include <string.h>
 #include <generic.h>
 
-void ddump(dentry_t *dentry, int flags) {
-    dassert_locked(dentry);
-
+void ddump(dentry_t *dp, int flags) {
     printf(
-        "d_name: %s\nd_refs: %ld\nd_flags: %lX\n"
-        "d_next: %p\nd_prev: %p\nd_parent: %p\nd_children: %p\n",
-        dentry->d_name,
-        dentry->d_refs,
-        dentry->d_flags,
-        dentry->d_next,
-        dentry->d_prev,
-        dentry->d_parent,
-        dentry->d_child
+        "d_name: %p::%s\nd_count: %ld\nd_flags: %lX\n"
+        "d_next: %p\nd_prev: %p\nd_parent: %p\nd_children: %p\n\n",
+        dp,
+        dp->d_name,
+        dp->d_count,
+        dp->d_flags,
+        dp->d_next,
+        dp->d_prev,
+        dp->d_parent,
+        dp->d_child
     );
 
     if (flags & DDUMP_HANG)
@@ -25,10 +24,45 @@ void ddump(dentry_t *dentry, int flags) {
         panic("PANICKED\n");
 }
 
+long dget_count(dentry_t *dp) {
+    dassert_locked(dp);
+    return dp->d_count;
+}
+
+void ddup(dentry_t *dp) {
+    dassert_locked(dp);
+    ++dp->d_count;
+}
+
+void dput(dentry_t *dp) {
+    dassert_locked(dp);
+    --dp->d_count;
+}
+
+void diput(dentry_t *dp) {
+    dassert_locked(dp);
+}
+
+int ddelete(struct dentry *dp) {
+    dassert_locked(dp);
+    printf("delete dentry object\n");
+    return -ENOSYS;
+}
+
+void drelease(struct dentry *dp) {
+    dassert_locked(dp);
+
+}
+
+int drevalidate(struct dentry *dp) {
+    dassert_locked(dp);
+    return dp->d_inode ? 1 : 0;
+}
+
 int dalloc(const char *__name, dentry_t **pdentry) {
     int err = 0;
     char *name = NULL;
-    dentry_t *dentry = NULL;
+    dentry_t *dp = NULL;
 
     if (__name == NULL || pdentry == NULL)
         return -EINVAL;
@@ -37,94 +71,80 @@ int dalloc(const char *__name, dentry_t **pdentry) {
         return -ENOMEM;
     
     err = -ENOMEM;
-    if (NULL == (dentry = malloc(sizeof *dentry)))
+    if (NULL == (dp = malloc(sizeof *dp)))
         goto error;
 
-    memset(dentry, 0, sizeof *dentry);
+    memset(dp, 0, sizeof *dp);
 
-    dentry->d_refs = 0;
-    dentry->d_name = name;
-    dentry->d_lock = SPINLOCK_INIT();
+    dp->d_count = 0;
+    dp->d_name = name;
+    dp->d_lock = SPINLOCK_INIT();
+    dp->d_ops = (dops_t) {
+        .diput = diput,
+        .ddelete = ddelete,
+        .drelease = drelease,
+        .drevalidate = drevalidate,
+    };
 
-    dlock(dentry);
-    *pdentry = dentry;
+    dlock(dp);
+    *pdentry = dp;
     return 0;
 error:
     if (name)
         free(name);
-    if (dentry)
-        free(dentry);
+    if (dp)
+        free(dp);
     return err;
 }
 
-static void dfree(dentry_t *dentry) {
-    dassert_locked(dentry);
-    dunbind(dentry);
-    if (dentry->d_name)
-        free(dentry->d_name);
-    free(dentry);
+void dfree(dentry_t *dp) {
+    dassert_locked(dp);
+    dunbind(dp);
+    dunlock(dp);
+    if (dp->d_name)
+        free(dp->d_name);
+    free(dp);
 }
 
-void ddup(dentry_t *dentry) {
-    dassert_locked(dentry);
-    dentry->d_refs++;
-}
-
-void drelease(dentry_t *dentry) {
-    dassert_locked(dentry);
-    if (--dentry->d_refs <= 0)
-        dfree(dentry);
-}
-
-void dunbind(dentry_t *dentry) {
+void dunbind(dentry_t *dp) {
     dentry_t *next = NULL;
     dentry_t *prev = NULL;
     dentry_t *d_parent = NULL;
 
-    dassert_locked(dentry);
-
-    next = dentry->d_next;
-    prev = dentry->d_prev;
-    d_parent = dentry->d_parent;
+    dassert_locked(dp);
+    next = dp->d_next;
+    prev = dp->d_prev;
+    d_parent = dp->d_parent;
 
     if (prev) {
         dlock(prev);
         prev->d_next = next;
-        if (next == NULL)
-            drelease(next);
-        else {
+        if (next) {
             dlock(next);
             next->d_prev = prev;
             dunlock(next);
         }
         dunlock(prev);
-        drelease(dentry);
-        dentry->d_prev = NULL;
+        dp->d_prev = NULL;
     }
 
     if (next) {
         dlock(next);
         next->d_prev = prev;
-        if (prev == NULL)
-            drelease(next);
-        else {
+        if (prev) {
             dlock(prev);
             prev->d_next = next;
             dunlock(prev);
         }
         dunlock(next);
-        drelease(dentry);
-        dentry->d_next = NULL;
+        dp->d_next = NULL;
     }
 
     if (d_parent) {
         dlock(d_parent);
-        if (d_parent->d_child == dentry){
+        if (d_parent->d_child == dp)
             d_parent->d_child = next ? next : prev;
-            drelease(dentry);
-        }
-        drelease(d_parent);
-        dentry->d_parent = NULL;
+        dp->d_parent = NULL;
         dunlock(d_parent);
     }
 }
@@ -138,8 +158,8 @@ int dbind(dentry_t *d_parent, dentry_t *d_child) {
         return -EALREADY;
 
     if ((d_child == d_parent) ||
-        (d_parent->d_name == NULL) ||
-        (d_child->d_name == NULL))
+        (d_child->d_name == NULL) ||
+        (d_parent->d_name == NULL))
         return -EINVAL;
 
     /**
@@ -174,24 +194,29 @@ int dbind(dentry_t *d_parent, dentry_t *d_child) {
 
     d_child->d_prev = d_last;
     d_last->d_next = d_child;
-    ddup(d_last);
     dunlock(d_last);
 done:
-    ddup(d_child);
     d_child->d_next = NULL;
     d_child->d_parent = d_parent;
-    ddup(d_parent);
+    // dsetflags(d_parent, DCACHE_REFERENCED);
     return 0;
 }
 
-void dclose(dentry_t *dentry) {
-    dassert_locked(dentry);
-    dunbind(dentry);
-    drelease(dentry);
+void dclose(dentry_t *dp) {
+    dassert_locked(dp);
+    dput(dp);
+    if (dget_count(dp) == 0) {
+        dp->d_ops.ddelete(dp);
+        dunlock(dp);
+    } else if (dget_count(dp) < 0) {
+        dfree(dp);
+    }
+
+    printf("[WARNING]: call d_inode->iput() to release the reference of d_inode.\n");
 }
 
 int dlookup(dentry_t *d_parent, const char *name, dentry_t **pchild) {
-    dentry_t *dentry = NULL, *d_next = NULL;
+    dentry_t *dp = NULL, *d_next = NULL;
 
     dassert_locked(d_parent);
 
@@ -199,12 +224,12 @@ int dlookup(dentry_t *d_parent, const char *name, dentry_t **pchild) {
         return -EINVAL;
     
     if (!compare_strings(".", name)) {
-        dentry = d_parent;
+        dp = d_parent;
         goto done;
     } else if (!compare_strings("..", name)) {
-        dentry = d_parent->d_parent;
-        if (dentry)
-            dlock(dentry);
+        dp = d_parent->d_parent;
+        if (dp)
+            dlock(dp);
         else
             return 0;
         goto done;
@@ -214,7 +239,7 @@ int dlookup(dentry_t *d_parent, const char *name, dentry_t **pchild) {
         dlock(d_node);
         d_next = d_node->d_next;
         if (!compare_strings(d_node->d_name, name)) {
-            dentry = d_node;
+            dp = d_node;
             goto done;
         }
         dunlock(d_node);
@@ -222,10 +247,31 @@ int dlookup(dentry_t *d_parent, const char *name, dentry_t **pchild) {
 
     return -ENOENT;
 done:
-    if (pchild) {
-        ddup(dentry);
-        *pchild = dentry;
-    } else
-        dunlock(dentry);
+    if (pchild)
+        *pchild = dp;
+    else
+        dunlock(dp);
     return 0;
+}
+
+int dmkdentry(dentry_t *dir, const char *name, dentry_t **pdp) {
+    int err = 0;
+    dentry_t *dp = NULL;
+    dassert_locked(dir);
+
+    if (pdp == NULL)
+        return -EINVAL;
+
+    if ((err = dalloc(name, &dp)))
+        return err;
+    
+    if ((err = dbind(dir, dp)))
+        goto error;
+
+    *pdp = dp;
+    return 0;
+error:
+    if (dp)
+        dfree(dp);
+    return err;
 }
