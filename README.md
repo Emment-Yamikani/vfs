@@ -2,7 +2,7 @@
 
 This repository is intended to be a simple implementation of a hirachical virtual filesystem developed to the best of my abilities and as such does not guarantee any level of accuracy whatsoever with regards to the standards(e.g POSIX).
 
-I have started this repo because i have noticed that there is not many sites on the web that teach VFS implementation thoroughly. I have been stuck in a loop on how to implement the best VFS i can for my operating system(s) (http://github.com/emment-yamikani/gingerOsx-x86_64.git or the 32bit version @ http://github.com/emment-yamikani/gingerOs.git). But most of the sites i have encountered so far are either lacking in one area or the other or fully non-unsable for a serious OS project.
+I have started this repo because i have noticed that there is not many sites on the web that teach VFS implementation thoroughly. I have been stuck in a loop on how to implement the best VFS i can for my operating system(s) (https://github.com/Emment-Yamikani/gingerOs-x86_64.git or the 32bit version @ https://github.com/Emment-Yamikani/gingerOs.git). But most of the sites i have encountered so far are either lacking in one area or the other or fully non-unsable for a serious OS project.
 
 Therefore, i have taken it upon myself to implement something with hopes that other hobbists out there who are facing the same challenges can draw some inspiration or maybe even adopt this software source code until such a time when they feel comfortable enough to deverge from the implementation designs herein.
 
