@@ -142,6 +142,10 @@ int     imknod(inode_t *dir, struct dentry *dentry, mode_t mode, int devid) {
 int     ifcntl(inode_t *ip, int cmd, void *argp) {
     int err = 0;
     iassert_locked(ip);
+
+    if (argp = NULL)
+        return -EINVAL;
+
     if ((err = icheck_op(ip, ifcntl)))
         return err;
     
@@ -151,6 +155,9 @@ int     ifcntl(inode_t *ip, int cmd, void *argp) {
 int     iioctl(inode_t *ip, int req, void *argp) {
     int err = 0;
     iassert_locked(ip);
+
+    if (argp = NULL)
+        return -EINVAL;
 
     if (IISDIR(ip))
         return -EISDIR;
@@ -220,7 +227,7 @@ int     irename(inode_t *dir, struct dentry *old, inode_t *newdir, struct dentry
     return dir->i_ops->irename(dir, old, newdir, new);
 }
 
-ssize_t     ireaddir(inode_t *dir, off_t off, void *buf, size_t count) {
+ssize_t ireaddir(inode_t *dir, off_t off, void *buf, size_t count) {
     ssize_t err = 0;
     iassert_locked(dir);
 
