@@ -15,6 +15,6 @@
 })
 
 #define assert(condition, __msg) ({                          \
-    assert_msg((condition), "%s:%d: thread[%lX] %s.\n",          \
+    assert_msg((condition), "%s:%d: [PANIC]: thread[%lX]: %s.\n",     \
                __FILE__, __LINE__, pthread_self(), (__msg)); \
 })

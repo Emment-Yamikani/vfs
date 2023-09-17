@@ -9,6 +9,7 @@ int main(void) {
 
     vfs_mount(NULL, "/tmp", "tmpfs", 0, NULL);
     vfs_mount(NULL, "/mnt", "tmpfs", 0, NULL);
+
     return 0;
 }
 

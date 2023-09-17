@@ -148,7 +148,7 @@ int     ifcntl(inode_t *ip, int cmd, void *argp) {
     int err = 0;
     iassert_locked(ip);
 
-    if (argp = NULL)
+    if (argp == NULL)
         return -EINVAL;
 
     if ((err = icheck_op(ip, ifcntl)))
@@ -161,7 +161,7 @@ int     iioctl(inode_t *ip, int req, void *argp) {
     int err = 0;
     iassert_locked(ip);
 
-    if (argp = NULL)
+    if (argp == NULL)
         return -EINVAL;
 
     if (IISDIR(ip))
