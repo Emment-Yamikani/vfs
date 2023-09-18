@@ -4,6 +4,7 @@
 #include <panic.h>
 #include <stdatomic.h>
 #include <pthread.h>
+#include <atomic.h>
 
 typedef struct
 {

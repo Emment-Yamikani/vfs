@@ -17,10 +17,12 @@ bin_dir=bin
 linked_objs+=\
 cmd.o\
 dentry.o\
+filesystem.o\
 inode.o\
 main.o\
 mount.o\
 path.o\
+superblock.o\
 vfs.o\
 
 .PHONY: all clean
