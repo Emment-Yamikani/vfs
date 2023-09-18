@@ -65,6 +65,7 @@ typedef struct filesysten {
 #define fsislocked(fs)      ({ fsassert(fs); spin_islocked(&(fs)->fs_lock); })
 #define fsassert_locked(fs) ({ fsassert(fs); spin_assert_locked(&(fs)->fs_lock); })
 
+void fs_free(filesystem_t *fs);
 int fs_create(const char *name, iops_t *iops, filesystem_t **pfs);
 void fs_dup(filesystem_t *fs);
 void fs_put(filesystem_t *fs);

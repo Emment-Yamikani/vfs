@@ -49,8 +49,10 @@ void fs_free(filesystem_t *fs) {
     fs_put(fs);
 
     if (fs->fs_count <= 0) {
-        fs_unsetname(fs);
-        qfree(fs->fs_superblocks);
+        if (fs->fs_name)
+            fs_unsetname(fs);
+        if (fs->fs_superblocks)
+            qfree(fs->fs_superblocks);
         fsunlock(fs);
         free(fs);
         return;
@@ -72,6 +74,8 @@ int fs_create(const char *name, iops_t *iops, filesystem_t **pfs) {
         goto error;
 
     fs->fs_iops = iops;
+
+    *pfs = fs;
 
     return 0;
 error:
