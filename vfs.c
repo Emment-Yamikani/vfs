@@ -21,8 +21,10 @@ int vfs_init(void) {
 
     if ((err = tmpfs_init()))
         return err;
-    
-    
+
+    if ((err=  vfs_mount(NULL, "/mnt", "tmpfs", MS_BIND, NULL)))
+        return err;    
+
     return 0;
 }
 
@@ -111,4 +113,30 @@ int vfs_unregister_fs(filesystem_t *fs) {
         return -EBUSY;
     
     return -EBUSY;
+}
+
+int vfs_getfs(const char *type, filesystem_t **pfs) {
+    filesystem_t *fs = NULL;
+    queue_node_t *next = NULL;
+
+    if (type == NULL || pfs == NULL)
+        return -EINVAL;
+
+    qlock(fs_queue);
+
+    forlinked(node, fs_queue->head, next) {
+        fs = node->data;
+        next = node->next;
+
+        fslock(fs);
+        if (!compare_strings(type, fs->fs_name)) {
+            *pfs = fs;
+            qunlock(fs_queue);
+            return 0;
+        }
+        fsunlock(fs);
+    }
+
+    qunlock(fs_queue);
+    return -ENOENT;
 }
