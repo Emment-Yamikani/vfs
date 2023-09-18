@@ -1,8 +1,10 @@
 
 #include <fs.h>
 #include <generic.h>
+#include <tmpfs.h>
 
 static dentry_t *droot = NULL;
+static queue_t *fs_queue = &QUEUE_INIT();
 
 dentry_t *vfs_getdroot(void) {
     if (droot)
@@ -16,6 +18,11 @@ int vfs_init(void) {
         return err;
     
     dunlock(droot);
+
+    if ((err = tmpfs_init()))
+        return err;
+    
+    
     return 0;
 }
 
@@ -73,4 +80,35 @@ found:
     return 0;
 error:
     return err;
+}
+
+int vfs_register_fs(filesystem_t *fs) {
+    int err = 0;
+    fsassert_locked(fs);
+    if (fs == NULL)
+        return -EINVAL;
+
+    if (fs->fs_ops.init) {
+        if ((err = fs->fs_ops.init()))
+            return err;
+    }
+
+    qlock(fs_queue);
+
+    enqueue(fs_queue, fs);
+
+    qunlock(fs_queue);
+    
+    return 0;
+}
+
+int vfs_unregister_fs(filesystem_t *fs) {
+    fsassert_locked(fs);
+    if (fs == NULL)
+        return -EINVAL;
+
+    if (fs_count(fs) > 0)
+        return -EBUSY;
+    
+    return -EBUSY;
 }

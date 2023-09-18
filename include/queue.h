@@ -21,11 +21,20 @@ typedef struct queue {
     spinlock_t      q_lock;
 } queue_t;
 
+
 #define qassert(q)          ({ assert((q), "No queue"); })
 #define qlock(q)            ({ qassert(q); spin_lock(&(q)->q_lock); })
 #define qunlock(q)          ({ qassert(q); spin_unlock(&(q)->q_lock); })
 #define qislocked(q)        ({ qassert(q); spin_islocked(&(q)->q_lock); })
 #define qassert_locked(q)   ({ qassert(q); spin_assert_locked(&(q)->q_lock); })
+
+#define QUEUE_INIT(q) ((queue_t){0})
+
+#define INIT_QUEUE(q) ({           \
+    qassert(q);                    \
+    memset(q, 0, sizeof *(q));     \
+    (q)->q_lock = SPINLOCK_INIT(); \
+})
 
 static inline int qalloc(queue_t **pq) {
     queue_t *q = NULL;

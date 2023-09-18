@@ -43,18 +43,43 @@ error:
 }
 
 void fs_free(filesystem_t *fs) {
-    fsassert_locked(fs);
+    if (!fsislocked(fs))
+        fslock(fs);
+
+    fs_put(fs);
 
     if (fs->fs_count <= 0) {
         fs_unsetname(fs);
         qfree(fs->fs_superblocks);
         fsunlock(fs);
         free(fs);
+        return;
     }
 
-    fs_put(fs);
     fsunlock(fs);
 }
+
+int fs_create(const char *name, iops_t *iops, filesystem_t **pfs) {
+    int err = 0;
+    filesystem_t *fs = NULL;
+    if (name == NULL || iops == NULL || pfs == NULL)
+        return -EINVAL;
+    
+    if ((err = fsalloc(&fs)))
+        return err;
+    
+    if ((err = fs_setname(fs, name)))
+        goto error;
+
+    fs->fs_iops = iops;
+
+    return 0;
+error:
+    if (fs)
+        fs_free(fs);
+    return err;
+}
+
 
 void fs_dup(filesystem_t *fs) {
     fsassert_locked(fs);
@@ -64,6 +89,11 @@ void fs_dup(filesystem_t *fs) {
 void fs_put(filesystem_t *fs) {
     fsassert_locked(fs);
     fs->fs_count--;
+}
+
+long fs_count(filesystem_t *fs) {
+    fsassert_locked(fs);
+    return fs->fs_count;
 }
 
 int fs_setname(filesystem_t *fs, const char *fsname) {

@@ -13,6 +13,7 @@ vfs_flags:=$(cflags) $(cppflags) -Iinclude
 
 #directory having iso-image recipe(contents)
 bin_dir=bin
+tmpfs_dir=tmpfs
 
 linked_objs+=\
 cmd.o\
@@ -23,7 +24,8 @@ main.o\
 mount.o\
 path.o\
 superblock.o\
-vfs.o
+vfs.o\
+$(tmpfs_dir)/tmpfs.o
 
 .PHONY: all clean
 

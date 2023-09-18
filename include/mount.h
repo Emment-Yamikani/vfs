@@ -4,12 +4,14 @@
 #include <spinlock.h>
 #include <dentry.h>
 
+struct filesystem;
+
 typedef struct {
-    char        *path;
-    char        *fstype;
-    int         flags;
-    void        *priv;
-    dentry_t    *mnt;
+    struct filesystem   *fs;
+    char                *path;
+    int                 flags;
+    void                *priv;
+    dentry_t            *mnt;
 } fs_mount_t;
 
 #define MS_BIND     0x00000001

@@ -7,14 +7,31 @@
 
 #define MAXFNAME 255
 
+typedef struct uio {
+    uid_t   u_uid, u_euid, u_suid;
+    gid_t   u_gid, u_egid, u_sgid;
+    mode_t  u_umask;
+} uio_t;
+
 struct filesystem;
+
+typedef struct {
+    int (*load)();
+    int (*mount)();
+    int (*unmount)();
+    int (*getattr)();
+    int (*setattr)();
+} sb_ops_t;
 
 typedef struct superblock {
     long                sb_id;
-    void                *sb_priv;
+    uio_t               sb_uio;
+    sb_ops_t            sb_ops;
     long                sb_count;
+    long                sb_flags;
+    void                *sb_priv;
+    fs_mount_t          *sb_mountpoint;
     struct filesystem   *sb_filesystem;
-
     spinlock_t          sb_lock;
 } superblock_t;
 
@@ -24,13 +41,20 @@ typedef struct superblock {
 #define sblocked(sb)        ({ sbassert(sb); spin_locked(&(sb)->sb_lock); })
 #define sbassert_locked(sb) ({ sbassert(sb); spin_assert_locked(&(sb)->sb_lock); })
 
+typedef struct {
+    int     (*init)();
+    int     (*fini)();
+} fs_ops_t;
+
 typedef struct filesysten {
     long        fs_id;
+    uio_t       fs_uio;
+    fs_ops_t     fs_ops;
+    long        fs_flags;
+    long        fs_count;
     char        *fs_name;
     iops_t      *fs_iops;
     void        *fs_priv;
-    long        fs_count;
-    fs_mount_t  *fs_mountpoint;
     queue_t     *fs_superblocks;
     spinlock_t  fs_lock;
 } filesystem_t;
@@ -38,11 +62,13 @@ typedef struct filesysten {
 #define fsassert(fs)        ({ assert((fs), "No filesystem"); })
 #define fslock(fs)          ({ fsassert(fs); spin_lock(&(fs)->fs_lock); });
 #define fsunlock(fs)        ({ fsassert(fs); spin_unlock(&(fs)->fs_lock); })
-#define fslocked(fs)        ({ fsassert(fs); spin_locked(&(fs)->fs_lock); })
+#define fsislocked(fs)      ({ fsassert(fs); spin_islocked(&(fs)->fs_lock); })
 #define fsassert_locked(fs) ({ fsassert(fs); spin_assert_locked(&(fs)->fs_lock); })
 
+int fs_create(const char *name, iops_t *iops, filesystem_t **pfs);
 void fs_dup(filesystem_t *fs);
 void fs_put(filesystem_t *fs);
+long fs_count(filesystem_t *fs);
 void fs_unsetname(filesystem_t *fs);
 int fs_setname(filesystem_t *fs, const char *fsname);
 int fs_set_iops(filesystem_t *fs, iops_t *iops);
@@ -53,4 +79,6 @@ int parse_path(const char *path, const char *__cwd, char **__abspath, char ***__
 
 int vfs_init(void);
 dentry_t *vfs_getdroot(void);
+int vfs_register_fs(filesystem_t *fs);
+int vfs_unregister_fs(filesystem_t *fs);
 int vfs_lookup(const char *fn, const char *cwd, int oflags __unused, dentry_t **pdp);
