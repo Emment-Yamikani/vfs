@@ -10,7 +10,7 @@ typedef struct {
     int         flags;
     void        *priv;
     dentry_t    *mnt;
-} vfsmount_t;
+} fs_mount_t;
 
 #define MS_BIND     0x00000001
 #define MS_REMOUNT  0x00000002

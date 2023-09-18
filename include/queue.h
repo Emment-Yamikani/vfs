@@ -25,7 +25,7 @@ typedef struct queue {
 #define qlock(q)            ({ qassert(q); spin_lock(&(q)->q_lock); })
 #define qunlock(q)          ({ qassert(q); spin_unlock(&(q)->q_lock); })
 #define qislocked(q)        ({ qassert(q); spin_islocked(&(q)->q_lock); })
-#define qassert_locked(q)   ({ qassert(q);spin_assert_locked(&(q)->q_lock); })
+#define qassert_locked(q)   ({ qassert(q); spin_assert_locked(&(q)->q_lock); })
 
 static inline int qalloc(queue_t **pq) {
     queue_t *q = NULL;
@@ -41,6 +41,36 @@ static inline int qalloc(queue_t **pq) {
     *pq = q;
 
     return 0;
+}
+
+static inline void qflush(queue_t *q) {
+    queue_node_t *next = NULL, *prev = NULL;
+    qassert_locked(q);
+
+    forlinked (node, q->head, next) {
+        next = node->next;
+        prev = node->prev;
+        if (prev)
+            prev->next = next;
+        if (next)
+            next->prev = prev;
+        if (node == q->head)
+            q->head = next;
+        if (node == q->tail)
+            q->tail = prev;
+
+        q->q_count--;
+        node->queue = NULL;
+        free(node);
+    }
+}
+
+static inline void qfree(queue_t*q) {
+    if (!qislocked(q))
+        qlock(q);
+    qflush(q);
+    qunlock(q);
+    free(q);
 }
 
 static inline size_t qcount(queue_t *q) {
@@ -180,26 +210,4 @@ static inline int qremove(queue_t *q, void *data) {
     }
 
     return -ENOENT;
-}
-
-static inline void qflush(queue_t *q) {
-    queue_node_t *next = NULL, *prev = NULL;
-    qassert_locked(q);
-
-    forlinked (node, q->head, next) {
-        next = node->next;
-        prev = node->prev;
-        if (prev)
-            prev->next = next;
-        if (next)
-            next->prev = prev;
-        if (node == q->head)
-            q->head = next;
-        if (node == q->tail)
-            q->tail = prev;
-
-        q->q_count--;
-        node->queue = NULL;
-        free(node);
-    }
 }

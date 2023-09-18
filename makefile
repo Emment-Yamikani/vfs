@@ -23,7 +23,7 @@ main.o\
 mount.o\
 path.o\
 superblock.o\
-vfs.o\
+vfs.o
 
 .PHONY: all clean
 

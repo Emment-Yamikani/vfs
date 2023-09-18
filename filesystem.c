@@ -1,5 +1,5 @@
-#include <errno.h>
 #include <fs.h>
+#include <errno.h>
 #include <generic.h>
 
 
@@ -13,23 +13,33 @@ static atomic_t fsIDalloc(void) {
 }
 
 int fsalloc(filesystem_t **pfs) {
+    int err = 0;
+    queue_t *queue = NULL;
     filesystem_t *fs = NULL;
 
     if (pfs == NULL)
         return -EINVAL;
 
-    if ((fs = malloc(sizeof *fs)) == NULL)
-        return -ENOMEM;
-    
+    if ((err = qalloc(&queue)))
+        return err;
+
+    if ((fs = malloc(sizeof *fs)) == NULL) {
+        err = -ENOMEM;
+        goto error;
+    }
+
     memset(fs, 0, sizeof *fs);
 
-    fs->fs_lock = SPINLOCK_INIT();
+    fs->fs_count = 1;
     fs->fs_id = fsIDalloc();
-
+    fs->fs_lock = SPINLOCK_INIT();
     fslock(fs);
-
     *pfs = fs;
     return 0;
+error:
+    if (queue)
+        qfree(queue);
+    return err;
 }
 
 void fs_free(filesystem_t *fs) {
@@ -37,6 +47,7 @@ void fs_free(filesystem_t *fs) {
 
     if (fs->fs_count <= 0) {
         fs_unsetname(fs);
+        qfree(fs->fs_superblocks);
         fsunlock(fs);
         free(fs);
     }

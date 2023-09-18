@@ -12,13 +12,6 @@ int main(void) {
     vfs_mount(NULL, "/mnt", "tmpfs", 0, NULL);
 
 
-    queue_t *q = NULL;
-
-    qalloc(&q);
-
-    qlock(q);
-
-    qunlock(q);
     return 0;
 }
 

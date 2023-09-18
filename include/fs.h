@@ -3,6 +3,7 @@
 #include <mount.h>
 #include <generic.h>
 #include <spinlock.h>
+#include <queue.h>
 
 #define MAXFNAME 255
 
@@ -10,9 +11,10 @@ struct filesystem;
 
 typedef struct superblock {
     long                sb_id;
-    struct filesystem   *sb_fs;
     void                *sb_priv;
     long                sb_count;
+    struct filesystem   *sb_filesystem;
+
     spinlock_t          sb_lock;
 } superblock_t;
 
@@ -28,7 +30,8 @@ typedef struct filesysten {
     iops_t      *fs_iops;
     void        *fs_priv;
     long        fs_count;
-
+    fs_mount_t  *fs_mountpoint;
+    queue_t     *fs_superblocks;
     spinlock_t  fs_lock;
 } filesystem_t;
 
