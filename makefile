@@ -16,6 +16,7 @@ bin_dir=bin
 tmpfs_dir=tmpfs
 
 linked_objs+=\
+btree.o\
 cmd.o\
 dentry.o\
 filesystem.o\
