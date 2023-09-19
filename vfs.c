@@ -29,8 +29,8 @@ int vfs_init(void) {
 }
 
 int vfs_lookup(const char *fn, const char *cwd, int oflags __unused, dentry_t **pdp) {
-    int err = 0;
     size_t tok_i = 0;
+    int err = 0, isdir = 0;
     dentry_t *d_dir = NULL, *dp = NULL;
     char *path = NULL, *last_tok = NULL, **toks = NULL;
 
@@ -40,7 +40,7 @@ int vfs_lookup(const char *fn, const char *cwd, int oflags __unused, dentry_t **
     if ((err = verify_path(fn)))
         return err;
     
-    if ((err = parse_path(fn, cwd, &path, &toks, &last_tok)))
+    if ((err = parse_path(fn, cwd, &path, &toks, &last_tok, NULL)))
         return err;
 
     if (!compare_strings(path, "/")) {
@@ -60,8 +60,21 @@ int vfs_lookup(const char *fn, const char *cwd, int oflags __unused, dentry_t **
         }
     next:
         dunlock(d_dir);
-        if (!compare_strings(tok, last_tok))
+        if (!compare_strings(tok, last_tok)) {
+            if (isdir) {
+                if (dp->d_inode) {
+                    ilock(dp->d_inode);
+                    if (IISDIR(dp->d_inode) == 0) {
+                        err = -ENOTDIR;
+                        iunlock(dp->d_inode);
+                        dunlock(dp);
+                        goto error;
+                    }
+                    iunlock(dp->d_inode);
+                }
+            }
             goto found;
+        }
         d_dir = dp;
         tok_i++;
     }

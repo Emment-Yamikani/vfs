@@ -17,8 +17,8 @@ struct filesystem;
 struct superblock;
 
 typedef struct {
-    inode_t *(*inode_alloc)(struct superblock *);
     dentry_t *(*mount)(struct superblock *);
+    inode_t *(*inode_alloc)(struct superblock *);
     int (*unmount)(struct superblock *);
     int (*getattr)(struct superblock *);
     int (*setattr)(struct superblock *);
@@ -80,7 +80,7 @@ int fs_create(const char *name, iops_t *iops, filesystem_t **pfs);
 
 
 int verify_path(const char *path);
-int parse_path(const char *path, const char *__cwd, char **__abspath, char ***__abspath_tokens, char **__last_token);
+int parse_path(const char *path, const char *__cwd, char **__abspath, char ***__abspath_tokens, char **__last_token, int *isdir);
 
 int vfs_init(void);
 dentry_t *vfs_getdroot(void);
