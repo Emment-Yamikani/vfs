@@ -1,24 +1,21 @@
 #include <fs.h>
 #include <generic.h>
 
-static queue_t *mountpoints = &QUEUE_INIT();
 
-int vfs_mount(const char *src, const char *dest __unused,
+int vfs_mount(const char *src, const char *target,
               const char *type, unsigned long flags,
               const void *data __unused) {
     int err = 0;
-    int no_dev = 0;
+    int has_dev = 0;
     filesystem_t *fs = NULL;
-    fs_mount_t *mount = NULL;
-    inode_t *ipsrc = NULL, *ipdst = NULL;
-    dentry_t *dentry = NULL, *dsrc = NULL, *ddst = NULL;
-
+    inode_t *isrc = NULL, *itarget = NULL;
+    __unused dentry_t *dentry = NULL, *dsrc = NULL, *dtarget = NULL;
 
     if (src == NULL)
         return -EINVAL;
     
     if (!compare_strings(src, "none"))
-        no_dev = 1;
+        has_dev = 1;
 
     if ((err = vfs_getfs(type, &fs)))
         return err;
@@ -28,16 +25,35 @@ int vfs_mount(const char *src, const char *dest __unused,
     }
 
     if (flags & MS_BIND) {
-        if (((err = vfs_lookup(src, NULL, 0, &dsrc))))
-            return err;
-        ipsrc = dsrc->d_inode;
-        ilock(ipsrc);
-        if (IISDIR(ipsrc) == 0) {
-            iunlock(ipsrc);
-            dclose(dsrc);
+        if (!has_dev){
+            if (((err = vfs_lookup(src, NULL, 0, &dsrc))))
+                return err;
+            isrc = dsrc->d_inode;
+            ilock(isrc);
+            if (IISDIR(isrc) == 0) {
+                iunlock(isrc);
+                dclose(dsrc);
+                fsunlock(fs);
+                return -ENOTDIR;
+            }
+        }
+
+        printf("Looking up target[%s]\n", target);
+        if ((err = vfs_lookup(target, NULL, 0, &dtarget)))
+            return err; // TODO: release dsrc
+
+        itarget = dsrc->d_inode;
+        ilock(itarget);
+        if (IISDIR(itarget) == 0) {
+            iunlock(itarget);
+            dclose(dtarget);
             fsunlock(fs);
             return -ENOTDIR;
         }
+
+        if ((err = fs->fs_ops.mount(fs, dsrc, dtarget, flags, (void *)data)))
+            return err; // TODO: release resource
+        
     }
 
     if (flags & MS_MOVE) {

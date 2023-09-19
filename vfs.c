@@ -19,12 +19,6 @@ int vfs_init(void) {
     
     dunlock(droot);
 
-    if ((err = tmpfs_init()))
-        return err;
-
-    if ((err=  vfs_mount(NULL, "/mnt", "tmpfs", MS_BIND, NULL)))
-        return err;    
-
     return 0;
 }
 
@@ -80,9 +74,10 @@ int vfs_lookup(const char *fn, const char *cwd, int oflags __unused, dentry_t **
     }
 
 delegate:
+    printf("delegating file search...\n");
     dp = NULL;
     foreach(tok, &toks[tok_i]) {
-
+        printf("looking up '%s' in '%s'\n", tok, d_dir->d_name);
     }
 
 found:

@@ -31,6 +31,7 @@ int tmpfs_init(void) {
     if ((err = vfs_register_fs(tmpfs)))
         goto error;
 
+    fsunlock(tmpfs);
     return 0;
 error:
     if (tmpfs)

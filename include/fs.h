@@ -49,9 +49,10 @@ typedef struct superblock {
 typedef struct {
     int     (*init)();
     int     (*fini)();
+    int     (*mount)(struct filesystem *fs, dentry_t *src, dentry_t *dst, unsigned long flags, void *data);
 } fs_ops_t;
 
-typedef struct filesysten {
+typedef struct filesystem {
     long        fs_id;
     fs_ops_t     fs_ops;
     long        fs_flags;
